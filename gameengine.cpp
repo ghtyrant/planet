@@ -7,6 +7,8 @@ GameEngine::GameEngine(const std::string& title, const unsigned int width, const
 {
   LOG(INFO) << "Creating rendering environment";
   screen.create(sf::VideoMode(width, height), title);
+  view_.reset(sf::FloatRect(0, 0, width, height));
+  screen.setView(view_);
   screen.setFramerateLimit(40);
 }
 

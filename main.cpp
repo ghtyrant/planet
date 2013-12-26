@@ -2,6 +2,7 @@
 #include "gameengine.h"
 #include "introstate.h"
 #include "easylogging++.h"
+#include "gameobject.h"
 
 _INITIALIZE_EASYLOGGINGPP
 

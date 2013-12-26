@@ -4,7 +4,7 @@
 #include <stack>
 #include <string>
 #include <memory>
-#include <SFML/Graphics.hpp>
+#include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/System/Time.hpp>
 
 class GameState;
@@ -30,6 +30,7 @@ class GameEngine
   protected:
   private:
     std::stack<std::unique_ptr<GameState>> states_;
+    sf::View view_;
 
     bool running_;
 
