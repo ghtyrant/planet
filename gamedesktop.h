@@ -21,6 +21,9 @@ class GameDesktop
   protected:
   private:
 
+    bool isMouseOverUI() const;
+    bool isMouseInRenderWindow() const;
+
     sf::Vector2u screen_size_;
     sf::RenderWindow& screen_;
     Space &space_;
@@ -31,6 +34,7 @@ class GameDesktop
     std::map<sfg::ToggleButton::Ptr, sfg::Window::Ptr> tasks_;
     float zoom_;
     bool mouse_left_down_;
+    bool gui_handled_click_;
     sf::Vector2i mouse_drag_start_position_;
 
     std::shared_ptr<CelestialObject> active_object_;

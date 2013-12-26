@@ -10,7 +10,7 @@ int main()
 {
   LOG(INFO) << "Starting up game ...";
 
-  GameEngine game("Hehe", 800, 600);
+  GameEngine game("Hehe", 1024, 786);
   game.run(game.build<IntroState>("IntroState"));
 
   sf::Clock clock;
