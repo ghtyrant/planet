@@ -79,6 +79,7 @@ class Space
     Space();
 
     void createBackground();
+    sf::Texture createPlanetTexture();
     void generate();
     void simulate();
     void draw(sf::RenderTarget &target);
@@ -98,6 +99,8 @@ class Space
 
     sf::Texture shooting_star_tex_;
     sf::Time shooting_star_timer_;
+
+    sf::Texture bla_;
 };
 
 #endif // SPACEGENERATOR_H

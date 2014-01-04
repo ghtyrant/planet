@@ -1,0 +1,6 @@
+cmake_minimum_required (VERSION 2.6)
+set(CMAKE_CXX_COMPILER "/usr/bin/clang++")
+add_definitions(-std=c++11)
+set(EXECUTABLE_NAME "planet")
+project (Planet)
+subdirs(src)

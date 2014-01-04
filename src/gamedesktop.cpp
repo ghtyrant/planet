@@ -41,84 +41,80 @@ void GameDesktop::addWindow(sfg::Window::Ptr window)
 
 void GameDesktop::handleEvents(const sf::Event &event)
 {
-  if (event.type == sf::Event::MouseWheelMoved)
+  // If mouse is over an UI element, we do not initiate drag scrolling
+  if (!isMouseOverUI())
   {
-    sf::View tmp = screen_.getView();
-    if (event.mouseWheel.delta > 0)
+    if (event.type == sf::Event::MouseWheelMoved)
     {
-      tmp.zoom(0.9f);
-      zoom_ *= 0.9f;
-    }
-    else
-    {
-      tmp.zoom(1.1f);
-      zoom_ *= 1.1f;
-    }
-    screen_.setView(tmp);
-  }
-  else if (event.type == sf::Event::MouseButtonPressed)
-  {
-    if (event.mouseButton.button == sf::Mouse::Left)
-    {
-      // If mouse is over an UI element, we do not initiate drag scrolling
-      if (!isMouseOverUI())
+      sf::View tmp = screen_.getView();
+      if (event.mouseWheel.delta > 0)
       {
-        if (!gui_handled_click_)
-        {
-          mouse_left_down_ = true;
-          mouse_drag_start_position_ = sf::Vector2i(event.mouseButton.x, event.mouseButton.y);
-        }
+        tmp.zoom(0.9f);
+        zoom_ *= 0.9f;
       }
       else
-        gui_handled_click_ = true;
+      {
+        tmp.zoom(1.1f);
+        zoom_ *= 1.1f;
+      }
+      screen_.setView(tmp);
     }
-  }
-  else if (event.type == sf::Event::MouseButtonReleased)
-  {
-    if (event.mouseButton.button == sf::Mouse::Left)
+
+    if (event.type == sf::Event::MouseButtonPressed || !mouse_left_down_)
     {
-      // Release after single click, selecting stuff
+      if (event.mouseButton.button == sf::Mouse::Left)
+      {
+        mouse_left_down_ = true;
+        mouse_drag_start_position_ = sf::Vector2i(event.mouseButton.x, event.mouseButton.y);
+      }
+    }
+
+    if (event.type == sf::Event::MouseButtonReleased)
+    {
+      if (event.mouseButton.button == sf::Mouse::Left)
+      {
+        // Release after single click, selecting stuff
+        if (mouse_left_down_)
+        {
+          sf::Vector2i window_pos = sf::Vector2i(event.mouseButton.x, event.mouseButton.y);
+          sf::Vector2f world_pos = screen_.mapPixelToCoords(window_pos);
+
+          std::shared_ptr<CelestialObject> tmp = space_.coordsOverObject(world_pos);
+          if (tmp != nullptr)
+          {
+            LOG(INFO) << "Selected " << tmp->getName();
+            if (active_object_ != nullptr)
+              active_object_->setColor(sf::Color(255, 255, 255));
+
+            active_object_ = tmp;
+            active_object_flash_ = 50;
+            active_object_flash_dir_ = 5;
+          }
+
+          mouse_left_down_ = false;
+        }
+      }
+    }
+
+    if (event.type == sf::Event::MouseMoved)
+    {
+      // Long click (for dragging)
       if (mouse_left_down_)
       {
-        sf::Vector2i window_pos = sf::Vector2i(event.mouseButton.x, event.mouseButton.y);
-        sf::Vector2f world_pos = screen_.mapPixelToCoords(window_pos);
-
-        std::shared_ptr<CelestialObject> tmp = space_.coordsOverObject(world_pos);
-        if (tmp != nullptr)
+        sf::Vector2i drag_delta = sf::Vector2i(event.mouseMove.x, event.mouseMove.y) - mouse_drag_start_position_;
+        if (drag_delta.x != 0 || drag_delta.y != 0)
         {
-          LOG(INFO) << "Selected " << tmp->getName();
-          if (active_object_ != nullptr)
-            active_object_->setColor(sf::Color(255, 255, 255));
-
-          active_object_ = tmp;
-          active_object_flash_ = 50;
-          active_object_flash_dir_ = 5;
+          LOG(INFO) << "Updateing view ...";
+          sf::View tmp = screen_.getView();
+          tmp.move(-drag_delta.x, -drag_delta.y);
+          screen_.setView(tmp);
         }
+        sf::Mouse::setPosition(mouse_drag_start_position_, screen_);
+      }
+    }
+  }
 
-        mouse_left_down_ = false;
-      }
-      // UI is not handling click anymore
-      else
-        gui_handled_click_ = false;
-    }
-  }
-  else if (event.type == sf::Event::MouseMoved)
-  {
-    // Long click (for dragging)
-    if (mouse_left_down_)
-    {
-      sf::Vector2i drag_delta = sf::Vector2i(event.mouseMove.x, event.mouseMove.y) - mouse_drag_start_position_;
-      if (drag_delta.x != 0 || drag_delta.y != 0)
-      {
-        sf::View tmp = screen_.getView();
-        tmp.move(-drag_delta.x, -drag_delta.y);
-        screen_.setView(tmp);
-      }
-      sf::Mouse::setPosition(mouse_drag_start_position_, screen_);
-    }
-  }
-  else
-    desktop_.HandleEvent(event);
+  desktop_.HandleEvent(event);
 }
 
 void GameDesktop::update(sf::Time delta)

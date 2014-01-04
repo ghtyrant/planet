@@ -24,7 +24,7 @@ class CelestialObject : public GameObject, public sf::Sprite
       GASPLANET,
     };
 
-    CelestialObject(const std::string &name, unsigned int radius, unsigned int age, unsigned int mass_);
+    CelestialObject(const std::string &name, const sf::Texture &tex, unsigned int radius, unsigned int age, unsigned int mass_);
     virtual ~CelestialObject();
 
     void setType(CelestialObject::Type type) {type_ = type;}

@@ -1,7 +1,8 @@
 #include "celestialobject.h"
 #include "consts.h"
+#include "easylogging++.h"
 
-CelestialObject::CelestialObject(const std::string &name, unsigned int radius, unsigned int age, unsigned int mass)
+CelestialObject::CelestialObject(const std::string &name, const sf::Texture &tex, unsigned int radius, unsigned int age, unsigned int mass)
   : GameObject(name),
     sf::Sprite(),
     radius_(radius),
@@ -11,11 +12,14 @@ CelestialObject::CelestialObject(const std::string &name, unsigned int radius, u
   velocity_.x = 0;
   velocity_.y = 0;
 
-  float size = ((float)radius_ / (float)RADIUS_MAX) * 0.2f;
-  setScale(size, size);
+  setTexture(tex);
 
   sf::FloatRect bounds = getGlobalBounds();
+  //LOG(INFO) << "Width: " << bounds.width << " Height: " << bounds.height;
   setOrigin(bounds.width / 2.0f, bounds.height / 2.0f);
+
+  float size = ((float)radius_ / (float)RADIUS_MAX) * 0.5f;
+  setScale(size, size);
 }
 
 CelestialObject::~CelestialObject()

@@ -1,9 +1,11 @@
 #include <random>
 #include <SFML/Graphics/RenderTexture.hpp>
+#include <SFML/Graphics/CircleShape.hpp>
 
 #include "space.h"
 #include "easylogging++.h"
 #include "consts.h"
+#include "perlinnoise.h"
 
 Space::Space()
 {
@@ -14,7 +16,7 @@ Space::Space()
     out << "media/planet" << (i+1) << ".png";
     img.loadFromFile(out.str());
     img.createMaskFromColor(sf::Color::Black);
-    std::shared_ptr<sf::Texture> tmp(new sf::Texture);
+    auto tmp = std::make_shared<sf::Texture>();
     tmp->loadFromImage(img);
     planet_textures_.push_back(std::move(tmp));
   }
@@ -26,7 +28,7 @@ Space::Space()
     out << "media/nebula" << (i+1) << ".png";
     img.loadFromFile(out.str());
     //img.createMaskFromColor(sf::Color::Black);
-    std::shared_ptr<sf::Texture> tmp(new sf::Texture);
+    auto tmp = std::make_shared<sf::Texture>();
     tmp->loadFromImage(img);
     nebula_textures_.push_back(std::move(tmp));
   }
@@ -118,6 +120,40 @@ void Space::createBackground()
   background_.setTexture(background_tex_);
 }
 
+sf::Texture Space::createPlanetTexture()
+{
+  PerlinNoise pn(0.2, 0.2, 1, 10, 23);
+
+  sf::Image img;
+  img.create(100, 100);
+
+  for (double x = 0; x < 100; x++)
+  {
+    for (double y = 0; y < 100; y++)
+    {
+      double height = (pn.get(x, y) + 0.5f) * 255.0f;
+      if (height == 0)
+        height = 1;
+      sf::Color color(height, height, height, 255);
+      img.setPixel(x, y, color);
+    }
+  }
+
+  sf::Texture tmp_tex;
+  tmp_tex.loadFromImage(img);
+
+  sf::RenderTexture tex;
+  tex.create(100, 100);
+
+  sf::CircleShape c;
+  c.setRadius(50);
+  c.setTexture(&tmp_tex);
+
+  tex.draw(c);
+
+  return tex.getTexture();
+}
+
 void Space::generate()
 {
   std::random_device rd;
@@ -129,10 +165,11 @@ void Space::generate()
 
   std::uniform_int_distribution<> planet_texture(0, 4);
 
-  for (int i = 0; i < 200; i++)
+  bla_ = createPlanetTexture();
+
+  for (int i = 0; i < 10; i++)
   {
-    std::shared_ptr<CelestialObject> o(new CelestialObject("Ladida1", radius_dist(rd), age_dist(rd), mass_dist(rd)));
-    o->setTexture(*planet_textures_[planet_texture(rd)]);
+    auto o = std::make_shared<CelestialObject>("Ladida1", *planet_textures_[planet_texture(rd)], radius_dist(rd), age_dist(rd), mass_dist(rd));
     o->setPosition(pos_dist(rd), pos_dist(rd));
     o->setMass(mass_dist(rd));
     objects_.push_back(std::move(o));

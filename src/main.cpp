@@ -13,7 +13,7 @@ int main()
   GameEngine game("Hehe", 1024, 786);
   game.run(game.build<IntroState>("IntroState"));
 
-  sf::Clock clock;
+  sf::Clock clock; 
   while (game.running())
   {
     game.update(clock.restart());
