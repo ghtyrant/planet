@@ -1,3 +1,5 @@
+#include <SFML/Window/Event.hpp>
+
 #include "gamedesktop.h"
 #include "easylogging++.h"
 #include "consts.h"
@@ -7,26 +9,65 @@
 GameDesktop::GameDesktop(sf::RenderWindow &screen, Space &space)
   : screen_(screen),
     space_(space),
+    renderer_(CEGUI::OpenGLRenderer::bootstrapSystem()),
     zoom_(1.0f),
     mouse_left_down_(false),
     gui_handled_click_(false),
     active_object_flash_(50),
     active_object_flash_dir_(1)
 {
+  screen_size_ = screen.getSize();
+
+  // Set up default resource groups
+  CEGUI::DefaultResourceProvider *rp = static_cast<CEGUI::DefaultResourceProvider*>(CEGUI::System::getSingleton().getResourceProvider());
+
+  rp->setResourceGroupDirectory("schemes", "/usr/share/cegui-0/schemes/"); 
+  rp->setResourceGroupDirectory("imagesets", "/usr/share/cegui-0/imagesets/");
+  rp->setResourceGroupDirectory("fonts", "/usr/share/cegui-0/fonts/");
+  rp->setResourceGroupDirectory("layouts", "/usr/share/cegui-0/layouts/");
+  rp->setResourceGroupDirectory("looknfeels", "/usr/share/cegui-0/looknfeel");
+  rp->setResourceGroupDirectory("lua_scripts", "/usr/share/cegui-0/lua_scripts/");
+
+  CEGUI::ImageManager::setImagesetDefaultResourceGroup("imagesets");
+  CEGUI::Font::setDefaultResourceGroup("fonts");
+  CEGUI::Scheme::setDefaultResourceGroup("schemes");
+  CEGUI::WidgetLookManager::setDefaultResourceGroup("looknfeels");
+  CEGUI::WindowManager::setDefaultResourceGroup("layouts");
+  CEGUI::ScriptModule::setDefaultResourceGroup("lua_scripts");
+
+  // Set up the GUI
+  CEGUI::SchemeManager::getSingleton().createFromFile("WindowsLook.scheme");
+  CEGUI::FontManager::getSingleton().createFromFile("DejaVuSans-10.font");
+
+  CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().setDefaultImage("WindowsLook/MouseArrow");
+
+  CEGUI::WindowManager& wmgr = CEGUI::WindowManager::getSingleton();
+  CEGUI::Window *root = wmgr.createWindow("DefaultWindow", "root");
+  root->setProperty("MousePassThroughEnabled", "True");
+  CEGUI::System::getSingleton().getDefaultGUIContext().setRootWindow(root);
+
+  CEGUI::FrameWindow *fw = static_cast<CEGUI::FrameWindow*>(wmgr.createWindow("WindowsLook/FrameWindow", "testWindow"));
+
+  root->addChild(fw);
+  fw->setText("Hallo Welt!");
   // Create our taskbar
-  taskbar_ = sfg::Window::Create(0);
+  /*taskbar_ = sfg::Window::Create(0);
   box_ = sfg::Box::Create(sfg::Box::Orientation::HORIZONTAL, 0.2f);
   taskbar_->Add(box_);
 
-  screen_size_ = screen.getSize();
 
   // Put the taskbar at the bottom of the screen
   sf::FloatRect rect = taskbar_->GetAllocation();
   taskbar_->SetPosition(sf::Vector2f(0, screen_size_.y - rect.height * 2));
-  desktop_.Add(taskbar_);
+  desktop_.Add(taskbar_);*/
+
+  //addWindow(dbg_window_.getWindow());
+
+  initializeKeyMap();
+  LOG(INFO) << "Initialized GameDesktop";
 }
 
-void GameDesktop::addWindow(sfg::Window::Ptr window)
+/*void GameDesktop::addWindow(sfg::Window::Ptr window)
 {
   auto button = sfg::ToggleButton::Create(window->GetTitle());
   button->SetRequisition(sf::Vector2f(150.0f, 0.0f));
@@ -37,12 +78,35 @@ void GameDesktop::addWindow(sfg::Window::Ptr window)
   window->GetSignal(sfg::Widget::OnLeftClick).Connect(std::bind(&GameDesktop::taskBarWindowFocus, this, button));
   box_->Pack(button);
   desktop_.Add(window);
-}
+}*/
 
 void GameDesktop::handleEvents(const sf::Event &event)
 {
+  bool handled = false;
+  CEGUI::GUIContext& context = CEGUI::System::getSingleton().getDefaultGUIContext();
+  sf::Vector2i pos = sf::Mouse::getPosition(screen_);
+
+  switch (event.type)
+  {
+  case sf::Event::TextEntered:
+    handled = context.injectChar(event.text.unicode); break;
+  case sf::Event::KeyPressed:
+    handled = context.injectKeyDown(toCEGUIKey(event.key.code)); break;
+  case sf::Event::KeyReleased:
+    handled = context.injectKeyUp(toCEGUIKey(event.key.code)); break;
+  case sf::Event::MouseMoved:
+    handled = context.injectMousePosition(static_cast<float>(event.mouseMove.x), static_cast<float>(event.mouseMove.y));
+    break;
+  case sf::Event::MouseButtonPressed:
+    handled = context.injectMouseButtonDown(toCEGUIMouseButton(event.mouseButton.button)); break;
+  case sf::Event::MouseButtonReleased:
+    handled = context.injectMouseButtonUp(toCEGUIMouseButton(event.mouseButton.button)); break;
+  case sf::Event::MouseWheelMoved:
+    handled = context.injectMouseWheelChange(static_cast<float>(event.mouseWheel.delta)); break;
+  }
+
   // If mouse is over an UI element, we do not initiate drag scrolling
-  if (!isMouseOverUI())
+  if (!handled)
   {
     if (event.type == sf::Event::MouseWheelMoved)
     {
@@ -99,7 +163,7 @@ void GameDesktop::handleEvents(const sf::Event &event)
     if (event.type == sf::Event::MouseMoved)
     {
       // Long click (for dragging)
-      if (mouse_left_down_)
+      if (mouse_left_down_ && false)
       {
         sf::Vector2i drag_delta = sf::Vector2i(event.mouseMove.x, event.mouseMove.y) - mouse_drag_start_position_;
         if (drag_delta.x != 0 || drag_delta.y != 0)
@@ -113,8 +177,6 @@ void GameDesktop::handleEvents(const sf::Event &event)
       }
     }
   }
-
-  desktop_.HandleEvent(event);
 }
 
 void GameDesktop::update(sf::Time delta)
@@ -131,15 +193,15 @@ void GameDesktop::update(sf::Time delta)
     active_object_->setColor(sf::Color(50, active_object_flash_, 50));
   }
 
-  desktop_.Update(delta.asSeconds());
+  //desktop_.Update(delta.asSeconds());
 }
 
 void GameDesktop::draw()
 {
-  gui_.Display(screen_);
+  CEGUI::System::getSingleton().renderAllGUIContexts();
 }
 
-void GameDesktop::taskBarButtonClick(sfg::ToggleButton::Ptr button)
+/*void GameDesktop::taskBarButtonClick(sfg::ToggleButton::Ptr button)
 {
   for (auto& it : tasks_)
     if (it.first != button)
@@ -159,24 +221,128 @@ void GameDesktop::taskBarWindowFocus(sfg::ToggleButton::Ptr button)
       else
         it.first->SetActive(true);
   }
-}
+}*/
 
-bool GameDesktop::isMouseOverUI() const
+void GameDesktop::initializeKeyMap()
 {
-  sf::Vector2i mouse_pos = sf::Mouse::getPosition(screen_);
-
-  if (taskbar_->GetAllocation().contains(mouse_pos.x, mouse_pos.y))
-    return true;
-
-  for (auto& it : tasks_)
-  {
-    // check for the respective window
-    if (it.second->GetAllocation().contains(mouse_pos.x, mouse_pos.y))
-      return true;
-  }
-
-  return false;
+  key_map_[sf::Keyboard::A]			= CEGUI::Key::A;
+	key_map_[sf::Keyboard::B]			= CEGUI::Key::B;
+	key_map_[sf::Keyboard::C]			= CEGUI::Key::C;
+	key_map_[sf::Keyboard::D]			= CEGUI::Key::D;
+	key_map_[sf::Keyboard::E]			= CEGUI::Key::E;
+	key_map_[sf::Keyboard::F]			= CEGUI::Key::F;
+	key_map_[sf::Keyboard::G]			= CEGUI::Key::G;
+	key_map_[sf::Keyboard::H]			= CEGUI::Key::H;
+	key_map_[sf::Keyboard::I]			= CEGUI::Key::I;
+	key_map_[sf::Keyboard::J]			= CEGUI::Key::J;
+	key_map_[sf::Keyboard::K]			= CEGUI::Key::K;
+	key_map_[sf::Keyboard::L]			= CEGUI::Key::L;
+	key_map_[sf::Keyboard::M]			= CEGUI::Key::M;
+	key_map_[sf::Keyboard::N]			= CEGUI::Key::N;
+	key_map_[sf::Keyboard::O]			= CEGUI::Key::O;
+	key_map_[sf::Keyboard::P]			= CEGUI::Key::P;
+	key_map_[sf::Keyboard::Q]			= CEGUI::Key::Q;
+	key_map_[sf::Keyboard::R]			= CEGUI::Key::R;
+	key_map_[sf::Keyboard::S]			= CEGUI::Key::S;
+	key_map_[sf::Keyboard::T]			= CEGUI::Key::T;
+	key_map_[sf::Keyboard::U]			= CEGUI::Key::U;
+	key_map_[sf::Keyboard::V]			= CEGUI::Key::V;
+	key_map_[sf::Keyboard::W]			= CEGUI::Key::W;
+	key_map_[sf::Keyboard::X]			= CEGUI::Key::X;
+	key_map_[sf::Keyboard::Y]			= CEGUI::Key::Y;
+	key_map_[sf::Keyboard::Z]			= CEGUI::Key::Z;
+	key_map_[sf::Keyboard::Num0]		= CEGUI::Key::Zero;
+	key_map_[sf::Keyboard::Num1]		= CEGUI::Key::One;
+	key_map_[sf::Keyboard::Num2]		= CEGUI::Key::Two;
+	key_map_[sf::Keyboard::Num3]		= CEGUI::Key::Three;
+	key_map_[sf::Keyboard::Num4]		= CEGUI::Key::Four;
+	key_map_[sf::Keyboard::Num5]		= CEGUI::Key::Five;
+	key_map_[sf::Keyboard::Num6]		= CEGUI::Key::Six;
+	key_map_[sf::Keyboard::Num7]		= CEGUI::Key::Seven;
+	key_map_[sf::Keyboard::Num8]		= CEGUI::Key::Eight;
+	key_map_[sf::Keyboard::Num9]		= CEGUI::Key::Nine;
+	key_map_[sf::Keyboard::Escape]		= CEGUI::Key::Escape;
+	key_map_[sf::Keyboard::LControl]	= CEGUI::Key::LeftControl;
+	key_map_[sf::Keyboard::LShift]		= CEGUI::Key::LeftShift;
+	key_map_[sf::Keyboard::LAlt]		= CEGUI::Key::LeftAlt;
+	key_map_[sf::Keyboard::LSystem]		= CEGUI::Key::LeftWindows;
+	key_map_[sf::Keyboard::RControl]	= CEGUI::Key::RightControl;
+	key_map_[sf::Keyboard::RShift]		= CEGUI::Key::RightShift;
+	key_map_[sf::Keyboard::RAlt]		= CEGUI::Key::RightAlt;
+	key_map_[sf::Keyboard::RSystem]		= CEGUI::Key::RightWindows;
+	key_map_[sf::Keyboard::LBracket]	= CEGUI::Key::LeftBracket;
+	key_map_[sf::Keyboard::RBracket]	= CEGUI::Key::RightBracket;
+	key_map_[sf::Keyboard::SemiColon]	= CEGUI::Key::Semicolon;
+	key_map_[sf::Keyboard::Comma]		= CEGUI::Key::Comma;
+	key_map_[sf::Keyboard::Period]		= CEGUI::Key::Period;
+	key_map_[sf::Keyboard::Quote]		= CEGUI::Key::Apostrophe;
+	key_map_[sf::Keyboard::Slash]		= CEGUI::Key::Slash;
+	key_map_[sf::Keyboard::BackSlash]	= CEGUI::Key::Backslash;
+	key_map_[sf::Keyboard::Tilde]		= CEGUI::Key::Grave;
+	key_map_[sf::Keyboard::Equal]		= CEGUI::Key::Equals;
+	key_map_[sf::Keyboard::Dash]		= CEGUI::Key::Minus;
+	key_map_[sf::Keyboard::Space]		= CEGUI::Key::Space;
+	key_map_[sf::Keyboard::Return]		= CEGUI::Key::Return;
+	key_map_[sf::Keyboard::BackSpace]	= CEGUI::Key::Backspace;
+	key_map_[sf::Keyboard::Tab]			= CEGUI::Key::Tab;
+	key_map_[sf::Keyboard::PageUp]		= CEGUI::Key::PageUp;
+	key_map_[sf::Keyboard::PageDown]	= CEGUI::Key::PageDown;
+	key_map_[sf::Keyboard::End]			= CEGUI::Key::End;
+	key_map_[sf::Keyboard::Home]		= CEGUI::Key::Home;
+	key_map_[sf::Keyboard::Insert]		= CEGUI::Key::Insert;
+	key_map_[sf::Keyboard::Delete]		= CEGUI::Key::Delete;
+	key_map_[sf::Keyboard::Add]			= CEGUI::Key::Add;
+	key_map_[sf::Keyboard::Subtract]	= CEGUI::Key::Subtract;
+	key_map_[sf::Keyboard::Multiply]	= CEGUI::Key::Multiply;
+	key_map_[sf::Keyboard::Divide]		= CEGUI::Key::Divide;
+	key_map_[sf::Keyboard::Left]		= CEGUI::Key::ArrowLeft;
+	key_map_[sf::Keyboard::Right]		= CEGUI::Key::ArrowRight;
+	key_map_[sf::Keyboard::Up]			= CEGUI::Key::ArrowUp;
+	key_map_[sf::Keyboard::Down]		= CEGUI::Key::ArrowDown;
+	key_map_[sf::Keyboard::Numpad0] 	= CEGUI::Key::Numpad0;
+	key_map_[sf::Keyboard::Numpad1] 	= CEGUI::Key::Numpad1;
+	key_map_[sf::Keyboard::Numpad2] 	= CEGUI::Key::Numpad2;
+	key_map_[sf::Keyboard::Numpad3] 	= CEGUI::Key::Numpad3;
+	key_map_[sf::Keyboard::Numpad4] 	= CEGUI::Key::Numpad4;
+	key_map_[sf::Keyboard::Numpad5] 	= CEGUI::Key::Numpad5;
+	key_map_[sf::Keyboard::Numpad6] 	= CEGUI::Key::Numpad6;
+	key_map_[sf::Keyboard::Numpad7] 	= CEGUI::Key::Numpad7;
+	key_map_[sf::Keyboard::Numpad8] 	= CEGUI::Key::Numpad8;
+	key_map_[sf::Keyboard::Numpad9] 	= CEGUI::Key::Numpad9;
+	key_map_[sf::Keyboard::F1]			= CEGUI::Key::F1;
+	key_map_[sf::Keyboard::F2]			= CEGUI::Key::F2;
+	key_map_[sf::Keyboard::F3]			= CEGUI::Key::F3;
+	key_map_[sf::Keyboard::F4]			= CEGUI::Key::F4;
+	key_map_[sf::Keyboard::F5]			= CEGUI::Key::F5;
+	key_map_[sf::Keyboard::F6]			= CEGUI::Key::F6;
+	key_map_[sf::Keyboard::F7]			= CEGUI::Key::F7;
+	key_map_[sf::Keyboard::F8]			= CEGUI::Key::F8;
+	key_map_[sf::Keyboard::F9]			= CEGUI::Key::F9;
+	key_map_[sf::Keyboard::F10]			= CEGUI::Key::F10;
+	key_map_[sf::Keyboard::F11]			= CEGUI::Key::F11;
+	key_map_[sf::Keyboard::F12]			= CEGUI::Key::F12;
+	key_map_[sf::Keyboard::F13]			= CEGUI::Key::F13;
+	key_map_[sf::Keyboard::F14]			= CEGUI::Key::F14;
+	key_map_[sf::Keyboard::F15]			= CEGUI::Key::F15;
+	key_map_[sf::Keyboard::Pause]		= CEGUI::Key::Pause;
+ 
+	mouse_map_[sf::Mouse::Left]		= CEGUI::LeftButton;
+	mouse_map_[sf::Mouse::Right]		= CEGUI::RightButton;
+	mouse_map_[sf::Mouse::Middle]		= CEGUI::MiddleButton;
+	mouse_map_[sf::Mouse::XButton1]	= CEGUI::X1Button;
+	mouse_map_[sf::Mouse::XButton2]	= CEGUI::X2Button;
 }
+
+CEGUI::Key::Scan GameDesktop::toCEGUIKey(sf::Keyboard::Key code)
+{
+  return key_map_[code];
+}
+
+CEGUI::MouseButton GameDesktop::toCEGUIMouseButton(sf::Mouse::Button button)
+{
+  return mouse_map_[button];
+}
+
 
 bool GameDesktop::isMouseInRenderWindow() const
 {
@@ -184,4 +350,6 @@ bool GameDesktop::isMouseInRenderWindow() const
   sf::IntRect window_rect(screen_.getPosition(), static_cast<sf::Vector2i>(screen_.getSize()));
 
   return window_rect.contains(mouse_pos);
+
+  return false;
 }

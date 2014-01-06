@@ -1,5 +1,6 @@
 cmake_minimum_required (VERSION 2.6)
 set(CMAKE_CXX_COMPILER "/usr/bin/clang++")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/CMakeModules/")
 add_definitions(-std=c++11)
 set(EXECUTABLE_NAME "planet")
 project (Planet)

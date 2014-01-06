@@ -165,9 +165,9 @@ void Space::generate()
 
   std::uniform_int_distribution<> planet_texture(0, 4);
 
-  bla_ = createPlanetTexture();
+  //bla_ = createPlanetTexture();
 
-  for (int i = 0; i < 10; i++)
+  for (int i = 0; i < 1; i++)
   {
     auto o = std::make_shared<CelestialObject>("Ladida1", *planet_textures_[planet_texture(rd)], radius_dist(rd), age_dist(rd), mass_dist(rd));
     o->setPosition(pos_dist(rd), pos_dist(rd));
