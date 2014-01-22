@@ -36,7 +36,6 @@ class GameDesktop
     sf::RenderWindow& screen_;
     Space &space_;
     CEGUI::OpenGLRenderer& renderer_;
-    CEGUI::WindowManager* wm_;
 
     //std::map<sfg::ToggleButton::Ptr, sfg::Window::Ptr> tasks_;
     float zoom_;

@@ -44,6 +44,7 @@ GameDesktop::GameDesktop(sf::RenderWindow &screen, Space &space)
   CEGUI::WindowManager& wmgr = CEGUI::WindowManager::getSingleton();
   CEGUI::Window *root = wmgr.createWindow("DefaultWindow", "root");
   root->setProperty("MousePassThroughEnabled", "True");
+  //root->setSize(CEGUI::USize(screen_size_.x, screen_size_.y));
   CEGUI::System::getSingleton().getDefaultGUIContext().setRootWindow(root);
 
   CEGUI::FrameWindow *fw = static_cast<CEGUI::FrameWindow*>(wmgr.createWindow("WindowsLook/FrameWindow", "testWindow"));
@@ -84,7 +85,6 @@ void GameDesktop::handleEvents(const sf::Event &event)
 {
   bool handled = false;
   CEGUI::GUIContext& context = CEGUI::System::getSingleton().getDefaultGUIContext();
-  sf::Vector2i pos = sf::Mouse::getPosition(screen_);
 
   switch (event.type)
   {
@@ -95,8 +95,7 @@ void GameDesktop::handleEvents(const sf::Event &event)
   case sf::Event::KeyReleased:
     handled = context.injectKeyUp(toCEGUIKey(event.key.code)); break;
   case sf::Event::MouseMoved:
-    handled = context.injectMousePosition(static_cast<float>(event.mouseMove.x), static_cast<float>(event.mouseMove.y));
-    break;
+    handled = context.injectMousePosition(static_cast<float>(event.mouseMove.x), static_cast<float>(event.mouseMove.y)); break;
   case sf::Event::MouseButtonPressed:
     handled = context.injectMouseButtonDown(toCEGUIMouseButton(event.mouseButton.button)); break;
   case sf::Event::MouseButtonReleased:
@@ -193,11 +192,18 @@ void GameDesktop::update(sf::Time delta)
     active_object_->setColor(sf::Color(50, active_object_flash_, 50));
   }
 
+  CEGUI::System::getSingleton().getDefaultGUIContext().injectTimePulse(delta.asSeconds());
+  
+  /*sf::View tmp = screen_.getView();
+  tmp.zoom(1.0001f);
+  screen_.setView(tmp);*/
   //desktop_.Update(delta.asSeconds());
 }
 
 void GameDesktop::draw()
 {
+  // resetGLStates to not get CEGUI windows transformed by SFML
+  screen_.resetGLStates();
   CEGUI::System::getSingleton().renderAllGUIContexts();
 }
 
