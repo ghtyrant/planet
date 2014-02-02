@@ -13,6 +13,7 @@ class GameEngine
 {
   public:
     GameEngine(const std::string& title, const unsigned int width = 800, const unsigned int height = 600);
+    ~GameEngine();
 
     void run(std::unique_ptr<GameState> state);
 

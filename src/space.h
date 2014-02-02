@@ -92,8 +92,11 @@ class Space
     std::vector<std::shared_ptr<CelestialObject>> objects_;
     std::vector<std::shared_ptr<sf::Texture>> planet_textures_;
     std::vector<std::shared_ptr<sf::Texture>> nebula_textures_;
+    std::vector<std::shared_ptr<sf::Texture>> sun_textures_;
     sf::Texture background_tex_;
     sf::Sprite background_;
+
+    std::shared_ptr<CelestialObject> sun_;
 
     std::vector<std::unique_ptr<ShootingStar>> shooting_stars_;
 

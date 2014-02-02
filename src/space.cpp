@@ -33,6 +33,17 @@ Space::Space()
     nebula_textures_.push_back(std::move(tmp));
   }
 
+  for (int i = 0; i < 1; i++)
+  {
+    sf::Image img;
+    std::ostringstream out;
+    out << "media/sun" << (i+1) << ".png";
+    img.loadFromFile(out.str());
+    auto tmp = std::make_shared<sf::Texture>();
+    tmp->loadFromImage(img);
+    sun_textures_.push_back(std::move(tmp));
+  }
+
   shooting_star_tex_.loadFromFile("media/shootingstar.png");
 
   createBackground();
@@ -118,6 +129,8 @@ void Space::createBackground()
   background_tex_.setRepeated(true);
   background_tex_.setSmooth(true);
   background_.setTexture(background_tex_);
+  background_.setOrigin(STARFIELD_SIZE/2.0f, STARFIELD_SIZE/2.0f);
+  background_.setPosition(0, 0);
 }
 
 sf::Texture Space::createPlanetTexture()
@@ -167,19 +180,26 @@ void Space::generate()
 
   //bla_ = createPlanetTexture();
 
+  sun_ = std::make_shared<CelestialObject>("Sun1", *sun_textures_[0], RADIUS_MAX, age_dist(rd), mass_dist(rd), nullptr); 
+  sun_->setPosition(0, 0);
+  objects_.push_back(sun_);
+
   for (int i = 0; i < 1; i++)
   {
-    auto o = std::make_shared<CelestialObject>("Ladida1", *planet_textures_[planet_texture(rd)], radius_dist(rd), age_dist(rd), mass_dist(rd));
+    auto o = std::make_shared<CelestialObject>("Ladida1", *planet_textures_[planet_texture(rd)], radius_dist(rd), age_dist(rd), mass_dist(rd), sun_);
     o->setPosition(pos_dist(rd), pos_dist(rd));
-    o->setMass(mass_dist(rd));
     objects_.push_back(std::move(o));
   }
+
+  auto moon = std::make_shared<CelestialObject>("Sun1", *sun_textures_[0], 1000.0, age_dist(rd), mass_dist(rd), objects_[1]); 
+  moon->setPosition(objects_[1]->getPosition().x - 50.0, objects_[1]->getPosition().y - 50.0);
+  objects_.push_back(moon);
 }
 
 std::shared_ptr<CelestialObject> Space::coordsOverObject(const sf::Vector2f pos)
 {
   for (auto& o : objects_)
-    if (o->getGlobalBounds().contains(pos))
+    if (o->isPointIn(pos))
       return o;
 
   return nullptr;
@@ -252,10 +272,27 @@ void Space::update(sf::Time delta)
 void Space::draw(sf::RenderTarget &target)
 {
   target.draw(background_);
+  sf::CircleShape path;
+  path.setFillColor(sf::Color::Transparent);
+  path.setOutlineColor(sf::Color(100, 100, 100));
+  path.setOutlineThickness(1);
+  path.setPointCount(1000);
 
   for (auto& o : objects_)
   {
     target.draw(*o);
+
+    if (o->hasParent())
+    {
+      sf::Vector2f sun_pos = o->getParent()->getPosition();
+      sf::Vector2f pos = o->getPosition();
+      sf::Vector2f result_pos = sf::Vector2f(sun_pos.x - pos.x, sun_pos.y - pos.y); 
+      float parent_distance = sqrt(result_pos.x*result_pos.x + result_pos.y*result_pos.y);
+      path.setRadius(parent_distance);
+      path.setOrigin(path.getGlobalBounds().width/2.0f, path.getGlobalBounds().height/2.0f);
+      path.setPosition(sun_pos);
+      target.draw(path);
+    }
   }
 
   for (auto& o : shooting_stars_)

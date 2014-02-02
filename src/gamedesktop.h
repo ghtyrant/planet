@@ -31,6 +31,7 @@ class GameDesktop
     CEGUI::MouseButton toCEGUIMouseButton(sf::Mouse::Button button);
 
     bool isMouseInRenderWindow() const;
+    void updateScrolling();
 
     sf::Vector2u screen_size_;
     sf::RenderWindow& screen_;
@@ -42,12 +43,15 @@ class GameDesktop
     bool mouse_left_down_;
     bool gui_handled_click_;
     sf::Vector2i mouse_drag_start_position_;
+    bool has_focus_;
 
     std::shared_ptr<CelestialObject> active_object_;
     unsigned char active_object_flash_;
     char active_object_flash_dir_;
     std::map<sf::Keyboard::Key, CEGUI::Key::Scan> key_map_;
     std::map<sf::Mouse::Button, CEGUI::MouseButton> mouse_map_;
+
+    CEGUI::Window *default_window_;
 };
 
 #endif // GAMEDESKTOP_H

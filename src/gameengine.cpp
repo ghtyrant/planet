@@ -6,10 +6,18 @@ GameEngine::GameEngine(const std::string& title, const unsigned int width, const
   : running_(false)
 {
   LOG(INFO) << "Creating rendering environment";
-  screen.create(sf::VideoMode(width, height), title);
+  sf::ContextSettings settings;
+  settings.antialiasingLevel = 8;
+  screen.create(sf::VideoMode(width, height), title, sf::Style::Default, settings);
   view_.reset(sf::FloatRect(0, 0, width, height));
   screen.setView(view_);
   screen.setFramerateLimit(40);
+  screen.setMouseCursorVisible(false);
+}
+
+GameEngine::~GameEngine()
+{
+  screen.setMouseCursorVisible(true);
 }
 
 bool GameEngine::running() const

@@ -5,7 +5,7 @@ static const float PI = 3.14159265358979323846f;
 static const unsigned int MASS_MIN = 100;
 static const unsigned int MASS_MAX = 1000;
 
-static const unsigned int RADIUS_MIN = 100;
+static const unsigned int RADIUS_MIN = 1000;
 static const unsigned int RADIUS_MAX = 10000;
 
 static const unsigned int AGE_MIN = 10000;

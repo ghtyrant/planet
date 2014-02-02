@@ -4,6 +4,7 @@
 #include <SFML/Graphics/Sprite.hpp>
 #include <SFML/System/Vector2.hpp>
 #include <SFML/System/Time.hpp>
+#include <SFML/Graphics/CircleShape.hpp>
 
 #include "gameobject.h"
 
@@ -14,7 +15,7 @@ public:
   float health_;
 };
 
-class CelestialObject : public GameObject, public sf::Sprite
+class CelestialObject : public GameObject, public sf::Drawable, public sf::Transformable
 {
   public:
     enum Type
@@ -24,7 +25,7 @@ class CelestialObject : public GameObject, public sf::Sprite
       GASPLANET,
     };
 
-    CelestialObject(const std::string &name, const sf::Texture &tex, unsigned int radius, unsigned int age, unsigned int mass_);
+    CelestialObject(const std::string &name, const sf::Texture &tex, unsigned int radius, unsigned int age, unsigned int mass_, const std::shared_ptr<CelestialObject> parent);
     virtual ~CelestialObject();
 
     void setType(CelestialObject::Type type) {type_ = type;}
@@ -41,15 +42,30 @@ class CelestialObject : public GameObject, public sf::Sprite
     void setAge(unsigned int age) {age_ = age;}
 
     void update(sf::Time delta);
+    virtual void draw(sf::RenderTarget &target, sf::RenderStates states) const;
+
+    bool isPointIn(const sf::Vector2f pos) const;
+
+    void setColor(const sf::Color color);
+
+    bool hasParent() const;
+    std::shared_ptr<CelestialObject> getParent() const;
 
   protected:
   private:
+    sf::Sprite sprite_;
     sf::Vector2f velocity_;
     unsigned int radius_;
     unsigned int age_;
     unsigned int mass_;
     CelestialObject::Type type_;
     Atmosphere atmosphere_;
+    std::shared_ptr<CelestialObject> parent_;
+    float parent_distance_;
+    sf::Vector2f last_parent_pos_;
+    sf::CircleShape path_;
+
+    sf::Vector2f origin_;
 };
 
 #endif // PLANET_H
