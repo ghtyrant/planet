@@ -9,7 +9,7 @@
 
 Space::Space()
 {
-  for (int i = 0; i < 5; i++)
+  for (int i = 0; i < 2; i++)
   {
     sf::Image img;
     std::ostringstream out;
@@ -44,7 +44,19 @@ Space::Space()
     sun_textures_.push_back(std::move(tmp));
   }
 
+  for (int i = 0; i < 1; i++)
+  {
+    sf::Image img;
+    std::ostringstream out;
+    out << "media/moon" << (i+1) << ".png";
+    img.loadFromFile(out.str());
+    auto tmp = std::make_shared<sf::Texture>();
+    tmp->loadFromImage(img);
+    moon_textures_.push_back(std::move(tmp));
+  }
+
   shooting_star_tex_.loadFromFile("media/shootingstar.png");
+  specular_planet_.loadFromFile("media/planet_specular.png");
 
   createBackground();
 }
@@ -174,26 +186,50 @@ void Space::generate()
   std::uniform_int_distribution<> radius_dist(RADIUS_MIN, RADIUS_MAX);
   std::uniform_int_distribution<> age_dist(AGE_MIN, AGE_MAX);
 
-  std::uniform_int_distribution<> pos_dist(0, SPACE_SIZE);
+  std::uniform_real_distribution<> planet_angle(0, 2*PI);
 
-  std::uniform_int_distribution<> planet_texture(0, 4);
+  std::uniform_int_distribution<> planet_texture(0, 1);
+
+  std::uniform_int_distribution<> moon_distance(150, 200);
+  std::uniform_real_distribution<> moon_angle(0, 2*PI);
+
+  std::uniform_real_distribution<> planet_turn_speed(0.05f, 0.15f);
 
   //bla_ = createPlanetTexture();
 
-  sun_ = std::make_shared<CelestialObject>("Sun1", *sun_textures_[0], RADIUS_MAX, age_dist(rd), mass_dist(rd), nullptr); 
+  sun_ = std::make_shared<CelestialObject>("Sun1", *sun_textures_[0], specular_planet_, RADIUS_MAX, age_dist(rd), mass_dist(rd), 0.0f); 
   sun_->setPosition(0, 0);
   objects_.push_back(sun_);
 
-  for (int i = 0; i < 1; i++)
+  unsigned int distance = 300;
+  for (int i = 0; i < 50; i++)
   {
-    auto o = std::make_shared<CelestialObject>("Ladida1", *planet_textures_[planet_texture(rd)], radius_dist(rd), age_dist(rd), mass_dist(rd), sun_);
-    o->setPosition(pos_dist(rd), pos_dist(rd));
-    objects_.push_back(std::move(o));
-  }
+    unsigned int mass = mass_dist(rd);
+    unsigned int radius = radius_dist(rd);
+    float angle = planet_angle(rd);
+    
+    sf::Vector2f pos(distance * cos(angle), distance * sin(angle));
 
-  auto moon = std::make_shared<CelestialObject>("Sun1", *sun_textures_[0], 1000.0, age_dist(rd), mass_dist(rd), objects_[1]); 
-  moon->setPosition(objects_[1]->getPosition().x - 50.0, objects_[1]->getPosition().y - 50.0);
-  objects_.push_back(moon);
+    auto o = std::make_shared<CelestialObject>("Ladida1", *planet_textures_[planet_texture(rd)], specular_planet_, radius, age_dist(rd), mass, planet_turn_speed(rd));
+    o->setPosition(pos);
+    sun_->addChild(o);
+    objects_.push_back(o);
+
+    distance += 300*((float)radius/(float)RADIUS_MAX);
+
+    if (radius > (RADIUS_MAX-RADIUS_MIN)/2)
+    {
+      auto moon = std::make_shared<CelestialObject>("Moon1", *moon_textures_[0], specular_planet_, 200.0, age_dist(rd), mass_dist(rd), 0.3f);
+      int distance = moon_distance(rd);
+      float angle = moon_angle(rd);
+
+      sf::Vector2f pos(distance * cos(angle), distance * sin(angle));
+
+      moon->setPosition(pos);
+      o->addChild(moon);
+      objects_.push_back(moon);
+    }
+  }
 }
 
 std::shared_ptr<CelestialObject> Space::coordsOverObject(const sf::Vector2f pos)
@@ -238,10 +274,7 @@ void Space::simulate()
 
 void Space::update(sf::Time delta)
 {
-  for (auto& o : objects_)
-  {
-    o->update(delta);
-  }
+  sun_->update(delta);
 
   for (auto it = shooting_stars_.begin(); it != shooting_stars_.end();)
   {
@@ -278,11 +311,9 @@ void Space::draw(sf::RenderTarget &target)
   path.setOutlineThickness(1);
   path.setPointCount(1000);
 
-  for (auto& o : objects_)
-  {
-    target.draw(*o);
+  target.draw(*sun_);
 
-    if (o->hasParent())
+    /*if (o->hasParent())
     {
       sf::Vector2f sun_pos = o->getParent()->getPosition();
       sf::Vector2f pos = o->getPosition();
@@ -292,8 +323,7 @@ void Space::draw(sf::RenderTarget &target)
       path.setOrigin(path.getGlobalBounds().width/2.0f, path.getGlobalBounds().height/2.0f);
       path.setPosition(sun_pos);
       target.draw(path);
-    }
-  }
+    }*/
 
   for (auto& o : shooting_stars_)
     target.draw(*o);

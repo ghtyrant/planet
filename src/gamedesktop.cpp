@@ -205,7 +205,6 @@ void GameDesktop::updateScrolling()
     sf::Vector2i drag_delta = mouse_pos - mouse_drag_start_position_;
     if (drag_delta.x != 0 || drag_delta.y != 0)
     {
-      LOG(INFO) << "Updateing view ...";
       sf::View tmp = screen_.getView();
       tmp.move(-drag_delta.x, -drag_delta.y);
       screen_.setView(tmp);
